@@ -1,0 +1,81 @@
+version: "2.1"
+services:
+
+  deluge:
+    image: "ghcr.io/linuxserver/deluge:${TAG}"
+    container_name: deluge
+    network_mode: host
+    environment:
+      - PUID="${UID}"
+      - PGID="${GID}"
+      - TZ="${TZ}"
+      - UMASK_SET="${UMASK}" #optional
+      - DELUGE_LOGLEVEL=error #optional
+    volumes:
+      - "${CONFIG_DIR}/delug":/config
+      - "${DOWNLOAD_DIR}":/downloads
+    restart: "${RESTART_CONFIG}"
+
+  jackett:
+    image: ghcr.io/linuxserver/jackett:latest
+    container_name: jackett
+    environment:
+      - PUID="${UID}"
+      - PGID="${GID}"
+      - TZ="${TZ}"
+      - AUTO_UPDATE=true #optional
+    volumes:
+      - "${CONFIG_DIR}/jackett":/config
+      - "${DOWNLOAD_DIR}":/downloads
+    ports:
+      - "${JACKETT_PORT}":9117
+    restart: "${RESTART_CONFIG}"
+
+  radarr:
+    image: ghcr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID="${UID}"
+      - PGID="${GID}"
+      - TZ="${TZ}"
+      - UMASK_SET="${UMASK}" #optional
+    volumes:
+      - "${CONFIG_DIR}/radarr":/config
+      - "${MOVIES_DIR}":/movies
+      - "${DOWNLOAD_DIR}":/downloads
+    ports:
+      - "${RADARR_PORT}":7878
+    restart: "${RESTART_CONFIG}"
+  
+  sonarr:
+    image: ghcr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID="${UID}"
+      - PGID="${GID}"
+      - TZ="${TZ}"
+      - UMASK_SET="${UMASK}" #optional
+    volumes:
+      - "${CONFIG_DIR}/sonarr":/config
+      - "${TV_DIR}":/tv
+      - "${DOWNLOAD_DIR}":/downloads
+    ports:
+      - "${SONARR_PORT}":8989
+    restart: "${RESTART_CONFIG}"
+  
+  plex:
+    image: plexinc/pms-docker
+    container_name: plex
+    network_mode: host
+    environment:
+      - TZ="${TZ}"
+      - PLEX_CLAIM="${PLEX_CLAIM}"
+      - PLEX_UID="${UID}
+      - PLEX_GID="${GID}"
+    volumes:
+      - "${CONFIG_DIR}/plex":/config
+      - "${TRANSCODE_DIR}":/transcode
+      - "${TV_DIR}":/tv
+      - "${MOVIES_DIR}":/movies
+      - "${MUSIC_DIR}":/music
+    restart: "${RESTART_CONFIG}"
