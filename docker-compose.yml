@@ -2,80 +2,92 @@ version: "2.1"
 services:
 
   deluge:
-    image: "ghcr.io/linuxserver/deluge:${TAG}"
+    image: ghcr.io/linuxserver/deluge:${TAG}
     container_name: deluge
-    network_mode: host
+    network_mode: ${NETWORK_MODE}
     environment:
-      - PUID="${UID}"
-      - PGID="${GID}"
-      - TZ="${TZ}"
-      - UMASK_SET="${UMASK}" #optional
-      - DELUGE_LOGLEVEL=error #optional
+      - PUID=${DELUGE_UID}
+      - PGID=${PLEX_GID}
+      - TZ=${TZ}
+      - UMASK_SET=${UMASK} #optional
+      - DELUGE_LOGLEVEL=${LOG_LEVEL} #optional
     volumes:
-      - "${CONFIG_DIR}/delug":/config
-      - "${DOWNLOAD_DIR}":/downloads
-    restart: "${RESTART_CONFIG}"
+      - ${CONFIG_DIR}/deluge:/config
+      - ${ROOT_MOUNT}:/plex
+    restart: ${RESTART_CONFIG}
 
   jackett:
-    image: ghcr.io/linuxserver/jackett:latest
+    image: ghcr.io/linuxserver/jackett:${TAG}
     container_name: jackett
     environment:
-      - PUID="${UID}"
-      - PGID="${GID}"
-      - TZ="${TZ}"
+      - PUID=${JACKETT_UID}
+      - PGID=${PLEX_GID}
+      - TZ=${TZ}
       - AUTO_UPDATE=true #optional
     volumes:
-      - "${CONFIG_DIR}/jackett":/config
-      - "${DOWNLOAD_DIR}":/downloads
+      - ${CONFIG_DIR}/jackett:/config
+      - ${ROOT_MOUNT}:/plex
     ports:
-      - "${JACKETT_PORT}":9117
-    restart: "${RESTART_CONFIG}"
+      - ${JACKETT_PORT}:9117
+    restart: ${RESTART_CONFIG}
+
 
   radarr:
-    image: ghcr.io/linuxserver/radarr:latest
+    image: ghcr.io/linuxserver/radarr:${TAG}
     container_name: radarr
     environment:
-      - PUID="${UID}"
-      - PGID="${GID}"
-      - TZ="${TZ}"
-      - UMASK_SET="${UMASK}" #optional
+      - PUID=${RADARR_UID}
+      - PGID=${PLEX_GID}
+      - TZ=${TZ}
+      - UMASK_SET=${UMASK} #optional
     volumes:
-      - "${CONFIG_DIR}/radarr":/config
-      - "${MOVIES_DIR}":/movies
-      - "${DOWNLOAD_DIR}":/downloads
+      - ${CONFIG_DIR}/radarr:/config
+      - ${ROOT_MOUNT}:/plex
     ports:
-      - "${RADARR_PORT}":7878
-    restart: "${RESTART_CONFIG}"
+      - ${RADARR_PORT}:7878
+    restart: ${RESTART_CONFIG}
   
   sonarr:
-    image: ghcr.io/linuxserver/sonarr:latest
+    image: ghcr.io/linuxserver/sonarr:${TAG}
     container_name: sonarr
     environment:
-      - PUID="${UID}"
-      - PGID="${GID}"
-      - TZ="${TZ}"
-      - UMASK_SET="${UMASK}" #optional
+      - PUID=${SONARR_UID}
+      - PGID=${PLEX_GID}
+      - TZ=${TZ}
+      - UMASK_SET=${UMASK} #optional
     volumes:
-      - "${CONFIG_DIR}/sonarr":/config
-      - "${TV_DIR}":/tv
-      - "${DOWNLOAD_DIR}":/downloads
+      - ${CONFIG_DIR}/sonarr:/config
+      - ${ROOT_MOUNT}:/plex
     ports:
-      - "${SONARR_PORT}":8989
-    restart: "${RESTART_CONFIG}"
-  
+      - ${SONARR_PORT}:8989
+    restart: ${RESTART_CONFIG}
+
+  lidarr:
+    image: ghcr.io/linuxserver/lidarr:${TAG}
+    container_name: lidarr
+    environment:
+      - PUID=${LIDARR_UID}
+      - PGID=${PLEX_GID}
+      - TZ=${TZ}
+      - UMASK_SET=${UMASK} #optional
+    volumes:
+      - ${CONFIG_DIR}/lidarr:/config
+      - ${ROOT_MOUNT}:/plex
+    ports:
+      - ${LIDARR_PORT}:8686
+    restart: ${RESTART_CONFIG}
+      
   plex:
     image: plexinc/pms-docker
     container_name: plex
-    network_mode: host
+    network_mode: ${NETWORK_MODE}
     environment:
-      - TZ="${TZ}"
-      - PLEX_CLAIM="${PLEX_CLAIM}"
-      - PLEX_UID="${UID}
-      - PLEX_GID="${GID}"
+      - TZ=${TZ}
+      - PLEX_CLAIM=${PLEX_CLAIM}
+      - PLEX_UID=${PLEX_UID}
+      - PLEX_GID=${PLEX_GID}
     volumes:
-      - "${CONFIG_DIR}/plex":/config
-      - "${TRANSCODE_DIR}":/transcode
-      - "${TV_DIR}":/tv
-      - "${MOVIES_DIR}":/movies
-      - "${MUSIC_DIR}":/music
-    restart: "${RESTART_CONFIG}"
+      - ${CONFIG_DIR}/plex:/config
+      - ${ROOT_MOUNT}:/plex
+    restart: ${RESTART_CONFIG}
+
