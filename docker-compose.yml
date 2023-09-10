@@ -1,99 +1,153 @@
-version: "2.1"
+version: "3.2"
 services:
-
-  deluge:
-    image: ghcr.io/linuxserver/deluge:${TAG}
-    container_name: deluge
-    network_mode: ${NETWORK_MODE}
-    environment:
-      - PUID=${DELUGE_UID}
-      - PGID=${PLEX_GID}
-      - TZ=${TZ}
-      - UMASK_SET=${UMASK} #optional
-      - DELUGE_LOGLEVEL=${LOG_LEVEL} #optional
-    volumes:
-      - ${CONFIG_DIR}/deluge:/config
-      - ${ROOT_MOUNT}:/plex
-      - ${MOVIES_MOUNT}:/movies
-      - ${MUSIC_MOUNT}:/music
+  reverse-proxy:
+    container_name: traefik
     restart: ${RESTART_CONFIG}
-
-  jackett:
-    image: ghcr.io/linuxserver/jackett:${TAG}
-    container_name: jackett
-    environment:
-      - PUID=${JACKETT_UID}
-      - PGID=${PLEX_GID}
-      - TZ=${TZ}
-      - AUTO_UPDATE=true #optional
-    volumes:
-      - ${CONFIG_DIR}/jackett:/config
-      - ${ROOT_MOUNT}:/plex
+    image: traefik:v2.10
+    command:
+      - --entrypoints.web.address=:80
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --api.insecure=true 
     ports:
-      - ${JACKETT_PORT}:9117
-    restart: ${RESTART_CONFIG}
-
+      - 80:80
+      - ${TRAEFIK_PORT}:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
   radarr:
-    image: ghcr.io/linuxserver/radarr:${TAG}
     container_name: radarr
+    image: cr.hotio.dev/hotio/radarr:${TAG}
+    restart: ${RESTART_CONFIG}
+    logging:
+      driver: json-file
+    ports:
+      - ${RADARR_PORT}:7878
     environment:
       - PUID=${RADARR_UID}
       - PGID=${PLEX_GID}
       - TZ=${TZ}
-      - UMASK_SET=${UMASK} #optional
+      - UMASK_SET=${UMASK}
     volumes:
-      - ${CONFIG_DIR}/radarr:/config
-      - ${ROOT_MOUNT}:/plex
-      - ${MOVIES_MOUNT}:/movies
-    ports:
-      - ${RADARR_PORT}:7878
-    restart: ${RESTART_CONFIG}
-  
+      - ${APPDATA_DIR}/radarr:/config
+      - ${DATA_DIR}:/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.radarr_route.entrypoints=web
+      - traefik.http.routers.radarr_route.rule=Host(`${RADARR_HOST}`)
+      - traefik.http.routers.radarr_route.service=radarr_service
+      - traefik.http.services.radarr_service.loadbalancer.server.port=${RADARR_PORT}
+
   sonarr:
-    image: ghcr.io/linuxserver/sonarr:${TAG}
     container_name: sonarr
-    environment:
-      - PUID=${SONARR_UID}
-      - PGID=${PLEX_GID}
-      - TZ=${TZ}
-      - UMASK_SET=${UMASK} #optional
-    volumes:
-      - ${CONFIG_DIR}/sonarr:/config
-      - ${ROOT_MOUNT}:/plex
+    image: cr.hotio.dev/hotio/sonarr:${TAG}
+    restart: ${RESTART_CONFIG}
+    logging:
+      driver: json-file
     ports:
       - ${SONARR_PORT}:8989
-    restart: ${RESTART_CONFIG}
-
-  lidarr:
-    image: ghcr.io/linuxserver/lidarr:${TAG}
-    container_name: lidarr
     environment:
-      - PUID=${LIDARR_UID}
+      - UID=${SONARR_UID}
       - PGID=${PLEX_GID}
       - TZ=${TZ}
       - UMASK_SET=${UMASK} #optional
     volumes:
-      - ${CONFIG_DIR}/lidarr:/config
-      - ${ROOT_MOUNT}:/plex
-      - ${MUSIC_MOUNT}:/music
+      - ${APPDATA_DIR}/sonarr:/config
+      - ${DATA_DIR}:/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sonarr_route.entrypoints=web
+      - traefik.http.routers.sonarr_route.rule=Host(`${SONARR_HOST}`)
+      - traefik.http.routers.sonarr_route.service=sonarr_service
+      - traefik.http.services.sonarr_service.loadbalancer.server.port=${SONARR_PORT}
+
+  lidarr:
+    container_name: lidarr
+    image: cr.hotio.dev/hotio/lidarr:${TAG}
+    restart: ${RESTART_CONFIG}
+    logging:
+      driver: json-file
     ports:
       - ${LIDARR_PORT}:8686
+    environment:
+      - UID=${LIDARR_UID}
+      - PGID=${PLEX_GID}
+      - TZ=${TZ}
+      - UMASK_SET=${UMASK} #optional
+    volumes:
+      - ${APPDATA_DIR}/lidarr:/config
+      - ${DATA_DIR}:/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.lidarr_route.entrypoints=web
+      - traefik.http.routers.lidarr_route.rule=Host(`${LIDARR_HOST}`)
+      - traefik.http.routers.lidarr_route.service=lidarr_service
+      - traefik.http.services.lidarr_service.loadbalancer.server.port=${LIDARR_PORT}
+
+  prowlarr:
+    container_name: prowlarr
+    image: cr.hotio.dev/hotio/prowlarr:${TAG}
     restart: ${RESTART_CONFIG}
-      
+    logging:
+      driver: json-file
+    ports:
+      - ${PROWLARR_PORT}:9696
+    environment:
+      - PUID=${PROWLARR_UID}
+      - PGID=${PLEX_GID}
+      - UMASK_SET=${UMASK}
+      - TZ=${TZ}
+    volumes:
+     - ${APPDATA_DIR}/prowlarr:/config
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.prowlarr_route.entrypoints=web
+      - traefik.http.routers.prowlarr_route.rule=Host(`${PROWLARR_HOST}`)
+      - traefik.http.routers.prowlarr_route.service=prowlarr_service
+      - traefik.http.services.prowlarr_service.loadbalancer.server.port=${PROWLARR_PORT}
+
+  qbittorrent:
+    container_name: qbittorrent
+    restart: ${RESTART_CONFIG}
+    image: cr.hotio.dev/hotio/qbittorrent
+    ports:
+      - ${QBITTORRENT_PORT}:8080
+    environment:
+      - PUID=${QBITTORRENT_UID}
+      - PGID=${PLEX_GID}
+      - UMASK=002
+      - TZ=Etc/UTC
+    volumes:
+      - ${APPDATA_DIR}/qborrent:/config
+      - ${DATA_DIR}:/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.qbittorrent_route.entrypoints=web
+      - traefik.http.routers.qbittorrent_route.rule=Host(`${QBITTORRENT_HOST}`)
+      - traefik.http.routers.qbittorrent_route.service=qbittorrent_service
+      - traefik.http.services.qbittorrent_service.loadbalancer.server.port=${QBITTORRENT_PORT}
+
   plex:
-    image: plexinc/pms-docker
     container_name: plex
-    network_mode: ${NETWORK_MODE}
+    image: plexinc/pms-docker
+    restart: ${RESTART_CONFIG}
+    ports:
+      - 32400:32400/tcp
+      - 3005:3005/tcp
+      - 8324:8324/tcp
+      - 32469:32469/tcp
+      - 1900:1900/udp
+      - 32410:32410/udp
+      - 32412:32412/udp
+      - 32413:32413/udp
+      - 32414:32414/udp
     environment:
       - TZ=${TZ}
       - PLEX_CLAIM=${PLEX_CLAIM}
       - PLEX_UID=${PLEX_UID}
       - PLEX_GID=${PLEX_GID}
+      - ADVERTISE_IP=http://192.168.1.127:32400/
     volumes:
-      - ${CONFIG_DIR}/plex:/config
-      - ${ROOT_MOUNT}:/plex
-      - ${MOVIES_MOUNT}:/movies
-      - ${MUSIC_MOUNT}:/music
-    restart: ${RESTART_CONFIG}
+      - ${APPDATA_DIR}/plex:/config
+      - ${DATA_DIR}/media:/plex
 
